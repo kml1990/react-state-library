@@ -1,34 +1,37 @@
 import React, { useEffect, useState } from 'react';
 
 const createStore = (initialState) => {
+  const listeners = new Set();
   let state = initialState;
   const getState = () => state;
-  const setState = (nextStae) => {
-    state = nextStae;
+  const setState = (nextState) => {
+    state = nextState;
+    listeners.forEach((listener) => listener());
+  }
+  const subscribe = (listener) => {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
   }
 
-  return { getState, setState }
+  return { getState, setState, subscribe }
 }
 
-let moduleState = { count: 0 };
-const setStates = new Set();
+const store = createStore({ count: 0 })
 
 const Counter1 = () => {
-  const [state, setState] = useState(moduleState);
+  const [state, setState] = useState(store.getState());
 
   useEffect(() => {
-    setStates.add(setState);
-    return () => {
-      setStates.delete(setState);
-    }
+    const callback = () => {
+      setState(store.getState());
+    };
+    const unsubscribe = store.subscribe(callback);
+    return unsubscribe;
   }, [])
 
   const increment = () => {
-    moduleState = { count: moduleState.count + 1};
-    setStates.forEach((fn) => {
-      fn(moduleState);
-    });
-    setState(moduleState);
+    const nextState = { count: store.getState().count + 1};
+    store.setState(nextState);
   }
 
   return (
@@ -39,21 +42,19 @@ const Counter1 = () => {
 }
 
 const Counter2 = () => {
-  const [state, setState] = useState(moduleState);
+  const [state, setState] = useState(store.getState());
 
   useEffect(() => {
-    setStates.add(setState);
-    return () => {
-      setStates.delete(setState);
-    }
+    const callback = () => {
+      setState(store.getState());
+    };
+    const unsubscribe = store.subscribe(callback);
+    return unsubscribe;
   }, [])
 
   const increment = () => {
-    moduleState = { count: moduleState.count + 1};
-    setStates.forEach((fn) => {
-      fn(moduleState);
-    });
-    setState(moduleState);
+    const nextState = { count: store.getState().count + 1};
+    store.setState(nextState);
   }
 
   return (
