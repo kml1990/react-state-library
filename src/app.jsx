@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useSyncExternalStore } from 'react';
 
-const createStore = (initialState) => {
+const createStore = (createState) => {
   const listeners = new Set();
-  let state = initialState;
   const getState = () => state;
   const setState = (nextState) => {
     state = typeof nextState === 'function' ? nextState(state) : nextState;
@@ -12,43 +11,51 @@ const createStore = (initialState) => {
     listeners.add(listener);
     return () => listeners.delete(listener);
   }
+  let state = createState(setState)
 
   return { getState, setState, subscribe }
 }
 
+// used as default selector to get whole store state
 const identity = (x) => x;
 
+// selector is used to grab particular property from the store store
 const useStore = (store, selector = identity) => {
-  const [state, setState] = useState(selector(store.getState()));
-
-  useEffect(() => {
-    const callback = () => {
-      setState(selector(store.getState()));
-    };
-    const unsubscribe = store.subscribe(callback);
-    callback();
-    return unsubscribe;
-  }, [store, selector]);
-
-  return [state, store.setState];
+  // prevent screen tearing for React 18
+  return useSyncExternalStore(
+    store.subscribe,
+    useCallback(() => selector(store.getState()), [store, selector]),
+  )
 }
 
 // APP CODE
 
-const store = createStore({ count1: 0, count2: 0 });
-
-const Counter1 = () => {
-  const [count1, setState] = useStore(
-    store,
-    useCallback((state) => state.count1, [])
-  );
-
-  const increment1 = () => {
+const store = createStore((setState) => ({
+  count1: 0,
+  count2: 0,
+  increment1: () => {
     setState((prev) => ({ 
       ...prev,
       count1: prev.count1 + 1
     }));
+  },
+  increment2: () => {
+    setState((prev) => ({ 
+      ...prev,
+      count2: prev.count2 + 1
+    }));
   }
+}));
+
+const Counter1 = () => {
+  const count1 = useStore(
+    store,
+    (state) => state.count1,
+  );
+  const increment1 = useStore(
+    store,
+    (state) => state.increment1,
+  );
 
   return (
     <div>
@@ -57,18 +64,17 @@ const Counter1 = () => {
     </div>
   )
 }
+
+
 const Counter2 = () => {
-  const [count2, setState] = useStore(
+  const count2 = useStore(
     store,
     useCallback((state) => state.count2, [])
   );
-
-  const increment2 = () => {
-    setState((prev) => ({ 
-      ...prev,
-      count2: prev.count2 + 1
-    }));
-  }
+  const increment2 = useStore(
+    store,
+    useCallback((state) => state.increment2, [])
+  );
 
   return (
     <div>
