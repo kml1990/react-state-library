@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 const createStore = (initialState) => {
   const listeners = new Set();
@@ -16,58 +16,76 @@ const createStore = (initialState) => {
   return { getState, setState, subscribe }
 }
 
-const store = createStore({ count: 0 });
+const identity = (x) => x;
 
-const useStore = (store) => {
-  const [state, setState] = useState(store.getState());
+const useStore = (store, selector = identity) => {
+  const [state, setState] = useState(selector(store.getState()));
 
   useEffect(() => {
     const callback = () => {
-      setState(store.getState());
+      setState(selector(store.getState()));
     };
     const unsubscribe = store.subscribe(callback);
     callback();
     return unsubscribe;
-  }, [store])
+  }, [store, selector]);
 
   return [state, store.setState];
 }
 
+// APP CODE
+
+const store = createStore({ count1: 0, count2: 0 });
+
 const Counter1 = () => {
-  const [state, setState] = useStore(store);
+  const [count1, setState] = useStore(
+    store,
+    useCallback((state) => state.count1, [])
+  );
 
-  const increment = () => {
-    setState((prev) => ({ ...prev, count: prev.count + 1 }));
+  const increment1 = () => {
+    setState((prev) => ({ 
+      ...prev,
+      count1: prev.count1 + 1
+    }));
   }
 
   return (
     <div>
-      {state.count} <button onClick={increment}>Increment</button>
+      {count1} <button onClick={increment1}>Increment</button>
+      {Math.random()}
     </div>
   )
 }
-
 const Counter2 = () => {
-  const [state, setState] = useStore(store);
+  const [count2, setState] = useStore(
+    store,
+    useCallback((state) => state.count2, [])
+  );
 
-  const increment = () => {
-    const nextState = { count: store.getState().count + 1};
-    setState(nextState);
+  const increment2 = () => {
+    setState((prev) => ({ 
+      ...prev,
+      count2: prev.count2 + 1
+    }));
   }
 
   return (
     <div>
-      {state.count} <button onClick={increment}>Increment</button>
+      {count2} <button onClick={increment2}>Increment</button>
+      {Math.random()}
     </div>
   )
 }
+
 
 const App = () => (
   <>
     <h1>Counter 1</h1>
     <Counter1 />
-
+    <Counter1 />
     <h1>Counter 2</h1>
+    <Counter2 />
     <Counter2 />
   </>
 )
