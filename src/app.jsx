@@ -5,7 +5,7 @@ const createStore = (initialState) => {
   let state = initialState;
   const getState = () => state;
   const setState = (nextState) => {
-    state = nextState;
+    state = typeof nextState === 'function' ? nextState(state) : nextState;
     listeners.forEach((listener) => listener());
   }
   const subscribe = (listener) => {
@@ -16,9 +16,9 @@ const createStore = (initialState) => {
   return { getState, setState, subscribe }
 }
 
-const store = createStore({ count: 0 })
+const store = createStore({ count: 0 });
 
-const Counter1 = () => {
+const useStore = (store) => {
   const [state, setState] = useState(store.getState());
 
   useEffect(() => {
@@ -26,12 +26,18 @@ const Counter1 = () => {
       setState(store.getState());
     };
     const unsubscribe = store.subscribe(callback);
+    callback();
     return unsubscribe;
-  }, [])
+  }, [store])
+
+  return [state, store.setState];
+}
+
+const Counter1 = () => {
+  const [state, setState] = useStore(store);
 
   const increment = () => {
-    const nextState = { count: store.getState().count + 1};
-    store.setState(nextState);
+    setState((prev) => ({ ...prev, count: prev.count + 1 }));
   }
 
   return (
@@ -42,19 +48,11 @@ const Counter1 = () => {
 }
 
 const Counter2 = () => {
-  const [state, setState] = useState(store.getState());
-
-  useEffect(() => {
-    const callback = () => {
-      setState(store.getState());
-    };
-    const unsubscribe = store.subscribe(callback);
-    return unsubscribe;
-  }, [])
+  const [state, setState] = useStore(store);
 
   const increment = () => {
     const nextState = { count: store.getState().count + 1};
-    store.setState(nextState);
+    setState(nextState);
   }
 
   return (

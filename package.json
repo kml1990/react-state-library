@@ -1,5 +1,5 @@
 {
-  "name": "module-state-library",
+  "name": "react-state-library",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
